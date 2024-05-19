@@ -1,0 +1,163 @@
+-- Посчитать количество участников всех сезонов Shark Tanks
+
+SELECT
+	COUNT(id) AS 'Количество уникальных проектов'
+FROM
+	startups;
+
+-- Определить самые популярные направления инвестиций
+
+SELECT
+	industry,
+	COUNT(industry) AS count_of_projects
+FROM
+	startups
+GROUP BY
+	industry
+ORDER BY 
+	count_of_projects DESC;
+
+	
+-- Общая сумма запрашиваемых инвестиций без разделения на направления
+
+SELECT
+	SUM(original_ask_amount) AS sum_of_ask_amount,
+	SUM(original_offered_equity) AS sum_of_original_offered_equity,
+	ROUND(AVG(original_offered_equity)) AS avg_original_offered_equity,
+	SUM(valuation_requested) AS sum_of_valuation_requested,
+	ROUND(AVG(valuation_requested)) AS avg_of_valuation_requested
+FROM
+	startups;
+	
+-- 69 403 021 автсралийских долларов
+-- при этом оценнка проектов участниками составила 500 879 506 австралийских долларов
+-- при средней оценке 1 проекта в 2 052 785, участники предлагают в среднем 17 %  в своем проекте
+
+-- определить самое популярное направление в бизнесе у зрителей
+
+SELECT
+	industry,
+	SUM(viewers) AS sum_of_views,
+	ROUND(AVG(viewers)) AS avg_of_views
+FROM
+	startups
+GROUP BY
+	industry
+ORDER BY
+	avg_of_views DESC;
+
+-- по результатам суммарных просмотров самым популярных направлениям являюятся
+-- при этом по результатам средних просмотров картина иная
+
+-- анализ тех, кто обращается с идеями
+
+SELECT
+    pitchers_gender,
+    COUNT(pitchers_gender) AS count_of_each_gender
+FROM
+    pitchers
+GROUP BY
+    pitchers_gender
+ORDER BY
+    count_of_each_gender DESC;
+-- большая часть обратившиътся участников не определена. 
+ -- при этом среди тех, кто определен преобладаются лица мужского пола
+   
+ SELECT 
+ 	p.pitchers_average_age AS pitchers_average_age,
+ 	COUNT(s.industry) AS count_num_indastry_startups
+ FROM
+ 	pitchers AS p
+ JOIN
+ 	startups AS s ON s.id = p.startup_id
+ GROUP BY
+ 	pitchers_average_age
+ ORDER BY
+ 	count_num_indastry_startups DESC;
+ 	
+ -- большая часть обратившися не определена, но основываясь на представленных данных можно сделать вывод о том, что большой процент
+ -- относится к  компаниям, предпринимателям, котооые уже имеются неокоторый опыт в бизнесе и в большей степени обращабтся за 
+ -- инвестициями для расширения
+ 
+ -- определим количество полученных офферов
+
+	
+SELECT
+    SUM(CASE WHEN received_offer = 1 THEN 1 ELSE 0 END) AS received_offer,
+    ROUND((SUM(CASE WHEN received_offer = 1 THEN 1 ELSE 0 END) * 100.0) / COUNT(id)) AS percentage
+FROM
+    offers;
+    
+ -- 63 % обратившися получили оффер 
+   
+ -- приняли офферы
+   
+WITH temp AS (
+    SELECT
+        SUM(CASE WHEN received_offer = 1 THEN 1 ELSE 0 END) AS received_offer
+    FROM
+        offers
+)
+    
+SELECT
+    SUM(CASE WHEN accepted_offer = 1 THEN 1 ELSE 0 END) AS accepted_offer,
+    ROUND((SUM(CASE WHEN accepted_offer = 1 THEN 1 ELSE 0 END) * 100.0) / t.received_offer) AS percentage
+FROM
+    offers
+CROSS JOIN
+    temp as t;
+    
+ -- 86 % из тех кто получил оффер приняли его 
+ 
+   
+ -- Общая сумма заключенных сделок
+   
+SELECT
+    SUM(total_deal_amount) AS total_deal_amount,
+    SUM(total_deal_equity) AS total_deal_equity, 
+    SUM(deal_valuation) AS deal_valuation,
+    (SUM(total_deal_amount) - (SELECT SUM(original_ask_amount) FROM startups)) AS diff_amount,
+    (SUM(total_deal_equity) - (SELECT SUM(original_offered_equity) FROM startups)) AS diff_equity,
+    (SUM(deal_valuation) - (SELECT SUM(valuation_requested) FROM startups)) AS diff_deal_valuation
+FROM
+    offers;
+-- как видно   
+   
+ -- Сколько каждый шарк вложил 
+SELECT
+	s.industry,
+	ROUND(SUM(i.steve_investment_amount)) AS steve,
+	ROUND(SUM(i.janine_investment_amount)) AS janine,
+	ROUND(SUM(i.andrew_investment_amount)) AS andrew,
+	ROUND(SUM(i.naomi_investment_amount)) AS naomi,
+	ROUND(SUM(i.glen_investment_amount)) AS glen,
+	ROUND(SUM(i.guest_investment_amount)) AS guest,
+	ROUND(SUM(COALESCE(i.steve_investment_amount, 0) + COALESCE(i.janine_investment_amount, 0) + COALESCE(i.andrew_investment_amount, 0) + COALESCE(i.naomi_investment_amount, 0) + COALESCE(i.glen_investment_amount, 0) + COALESCE(i.guest_investment_amount, 0))) AS total_investment_amount
+FROM
+	startups AS s
+INNER JOIN
+	investments AS i ON i.startup_id = s.id
+GROUP BY
+	s.industry
+ORDER BY
+	total_investment_amount DESC;
+
+-- Стартап который привлек больше всего инвестиций
+
+SELECT
+	i.startup_name,
+	ROUND(SUM(COALESCE(i.steve_investment_amount, 0) + COALESCE(i.janine_investment_amount, 0) + COALESCE(i.andrew_investment_amount, 0) + COALESCE(i.naomi_investment_amount, 0) + COALESCE(i.glen_investment_amount, 0) + COALESCE(i.guest_investment_amount, 0))) AS total_sum,
+	s.business_description,
+	s.company_website,
+	s.industry
+FROM
+	investments AS i
+INNER JOIN
+	startups AS s ON s.id = i.startup_id
+GROUP BY
+	i.startup_name
+ORDER BY
+	total_sum DESC
+LIMIT 10;
+
+	
